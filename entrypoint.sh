@@ -2,7 +2,6 @@
 set -e pipefail
 
 export REGISTRY=${INPUT_REGISTRY:-"docker.pkg.github.com"}
-export IMAGE=${INPUT_IMAGE}
 export BRANCH=$(echo ${GITHUB_REF} | sed -E "s/refs\/(heads|tags)\///g" | sed -e "s/\//-/g")
 export USERNAME=${INPUT_USERNAME:-$GITHUB_ACTOR}
 export PASSWORD=${INPUT_PASSWORD:-$GITHUB_TOKEN}
@@ -21,9 +20,10 @@ function ensure() {
 ensure "${REGISTRY}" "registry"
 ensure "${USERNAME}" "username"
 ensure "${PASSWORD}" "password"
-ensure "${IMAGE}" "image"
 ensure "${CONTEXT_PATH}" "path"
 ensure "${ROOTFS_PATH}" "rootfs_path"
+
+export IMAGE="image-name"
 
 if [ "$REGISTRY" == "docker.pkg.github.com" ]; then
     IMAGE_NAMESPACE="$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')"
