@@ -1,0 +1,77 @@
+diff --git a/rootfs/rootfs.go b/rootfs/rootfs.go
+index 8494b36..1d23e68 100644
+--- a/rootfs/rootfs.go
++++ b/rootfs/rootfs.go
+@@ -14,7 +14,6 @@ import (
+ 
+ const (
+ 	_manifestJSON = "manifest.json"
+-	_tarSuffix    = ".tar"
+ 	_whReaddir    = ".wh..wh..opq"
+ 	_whPrefix     = ".wh."
+ )
+@@ -40,8 +39,8 @@ func Flatten(rd io.ReadSeeker, w io.Writer) (_err error) {
+ 	var closer func() error
+ 	var err error
+ 
+-	// layerOffsets maps a layer name (a9b123c0daa/layer.tar) to it's offset
+-	layerOffsets := map[string]int64{}
++	// fileOffsets maps a file name inside the tar (usually a layer name like a9b123c0daa/layer.tar) to it's offset
++	fileOffsets := map[string]int64{}
+ 
+ 	// manifest is the docker manifest in the image
+ 	var manifest dockerManifestJSON
+@@ -64,25 +63,26 @@ func Flatten(rd io.ReadSeeker, w io.Writer) (_err error) {
+ 			if err := dec.Decode(&manifest); err != nil {
+ 				return fmt.Errorf("decode %s: %w", _manifestJSON, err)
+ 			}
+-		case strings.HasSuffix(hdr.Name, _tarSuffix):
+-			here, err := rd.Seek(0, io.SeekCurrent)
+-			if err != nil {
+-				return err
+-			}
+-			layerOffsets[hdr.Name] = here
+ 		}
++
++		// add all files to lookup table
++		here, err := rd.Seek(0, io.SeekCurrent)
++		if err != nil {
++			return err
++		}
++		fileOffsets[hdr.Name] = here
+ 	}
+ 
+-	if err := validateManifest(layerOffsets, manifest); err != nil {
++	if err := validateManifest(fileOffsets, manifest); err != nil {
+ 		return err
+ 	}
+ 
+ 	// enumerate layers the way they would be laid down in the image
+-	layers := make([]nameOffset, len(layerOffsets))
++	layers := make([]nameOffset, len(fileOffsets))
+ 	for i, name := range manifest[0].Layers {
+ 		layers[i] = nameOffset{
+ 			name:   name,
+-			offset: layerOffsets[name],
++			offset: fileOffsets[name],
+ 		}
+ 	}
+ 
+@@ -236,7 +236,7 @@ func whiteoutDirs(whreaddir map[string]int, nlayers int) []*tree {
+ 
+ // validateManifest
+ func validateManifest(
+-	layerOffsets map[string]int64,
++	fileOffsets map[string]int64,
+ 	manifest dockerManifestJSON,
+ ) error {
+ 	if len(manifest) == 0 {
+@@ -244,7 +244,7 @@ func validateManifest(
+ 	}
+ 
+ 	for _, layer := range manifest[0].Layers {
+-		if _, ok := layerOffsets[layer]; !ok {
++		if _, ok := fileOffsets[layer]; !ok {
+ 			return fmt.Errorf("%s defined in manifest, missing in tarball", layer)
+ 		}
+ 	}

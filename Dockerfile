@@ -2,9 +2,23 @@ FROM alpine as certs
 
 RUN apk --update add ca-certificates
 
+FROM golang:buster as undocker-build
+
+COPY patches/undocker /patches
+RUN apt-get update && \
+    apt-get install patch && \
+    mkdir /build && \
+    cd /build && \
+    git clone https://git.sr.ht/~motiejus/undocker --branch v1.0.2 . && \
+    for i in /patches/*.patch; do patch -p1 < $i; done && \
+    make
+
+
 FROM gcr.io/kaniko-project/executor:debug
 
 SHELL ["/busybox/sh", "-c"]
+
+COPY --from=undocker-build /build/undocker /kaniko/undocker
 
 RUN wget -O /kaniko/jq \
     https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 && \
@@ -22,5 +36,5 @@ COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifica
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-LABEL repository="https://github.com/aevea/action-kaniko" \
-    maintainer="Alex Viscreanu <alexviscreanu@gmail.com>"
+LABEL repository="https://github.com/DCNick3/action-kaniko-rootfs" \
+    maintainer="Nikita Strygin <nikita6@bk.ru>"
