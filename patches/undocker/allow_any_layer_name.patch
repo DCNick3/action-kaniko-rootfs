@@ -1,5 +1,5 @@
 diff --git a/rootfs/rootfs.go b/rootfs/rootfs.go
-index 8494b36..1d23e68 100644
+index 8494b36..e601eff 100644
 --- a/rootfs/rootfs.go
 +++ b/rootfs/rootfs.go
 @@ -14,7 +14,6 @@ import (
@@ -48,7 +48,7 @@ index 8494b36..1d23e68 100644
  
  	// enumerate layers the way they would be laid down in the image
 -	layers := make([]nameOffset, len(layerOffsets))
-+	layers := make([]nameOffset, len(fileOffsets))
++	layers := make([]nameOffset, len(manifest[0].Layers))
  	for i, name := range manifest[0].Layers {
  		layers[i] = nameOffset{
  			name:   name,
